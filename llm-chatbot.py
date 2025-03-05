@@ -19,28 +19,60 @@ docsearch = PineconeVectorStore.from_existing_index(
 )
 retriever = docsearch.as_retriever()
 
-llm = ChatOpenAI(
-    base_url=st.secrets["BASE_URL_API_KEY"],
-    openai_api_key=st.secrets["OPENAI_API_KEY"],
-    model_name=st.secrets["LLM_MODEL"],
-    temperature=0.0,
-    streaming=True
-)
 
-combine_docs_chain = create_stuff_documents_chain(
-    llm, retrieval_qa_chat_prompt
-)
-retrieval_chain = create_retrieval_chain(retriever, combine_docs_chain)
+def create_llm(model_name):
+    return ChatOpenAI(
+        base_url=st.secrets["BASE_URL_API_KEY"],
+        openai_api_key=st.secrets["OPENAI_API_KEY"],
+        model_name=model_name,
+        temperature=0.0,
+        streaming=True
+    )
 
-st.set_page_config(layout="wide")
-st.header("RAG PoC")
-st.write("Ứng dụng sử dụng tài liệu [bài phân tích thị trường nhựa tái chế ở việt nam](https://raw.githubusercontent.com/luongbdhust/rag-poc-on-japanese/main/phan-tich-nhua-tai-che-vietnam-japanese.pdf) để làm kiến thức bổ sung cho các llm model khi thực hiện hỏi đáp. Tài liệu này là ngôn ngữ tiếng nhật(Được dịch từ tiếng việt bằng google dịch). Bạn có thể click vào link để tải về xem.")
 
-if "openai_model" not in st.session_state:
-    st.session_state["openai_model"] = "gpt-4o-mini"
+def create_retrieval(llm):
+    combine_docs_chain = create_stuff_documents_chain(
+        llm, retrieval_qa_chat_prompt)
+    return create_retrieval_chain(retriever, combine_docs_chain)
+
+# llm = ChatOpenAI(
+#     base_url=st.secrets["BASE_URL_API_KEY"],
+#     openai_api_key=st.secrets["OPENAI_API_KEY"],
+#     model_name=st.secrets["LLM_MODEL"],
+#     temperature=0.0,
+#     streaming=True
+# )
+
+# combine_docs_chain = create_stuff_documents_chain(
+#     llm, retrieval_qa_chat_prompt
+# )
+# retrieval_chain = create_retrieval_chain(retriever, combine_docs_chain)
+
+
+if "selected_model" not in st.session_state:
+    st.session_state.selected_model = "deepseek/deepseek-r1:free"
+    st.session_state.llm = create_llm(st.session_state.selected_model)
+    st.session_state.retrieval_chain = create_retrieval(st.session_state.llm)
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
+
+st.set_page_config(layout="wide")
+st.header("PoC ứng dụng hỏi đáp trên tập dữ liệu riêng")
+st.write("Ứng dụng sử dụng tài liệu [bài phân tích thị trường nhựa tái chế ở việt nam](https://raw.githubusercontent.com/luongbdhust/rag-poc-on-japanese/main/phan-tich-nhua-tai-che-vietnam-japanese.pdf) để làm kiến thức bổ sung cho các llm model khi thực hiện hỏi đáp. Tài liệu này là ngôn ngữ tiếng nhật(Được dịch từ [bản tiếng việt](https://raw.githubusercontent.com/luongbdhust/rag-poc-on-japanese/main/phan-tich-nhua-tai-che-vietnam-vietnamese.pdf) bằng google dịch). Bạn có thể click vào link để tải về xem.")
+
+selected_model = st.selectbox(
+    "Lựa chọn model bạn muốn sử dụng?",
+    ("deepseek/deepseek-r1:free", "deepseek/deepseek-r1",
+     "openai/gpt-4o-mini", "openai/o3-mini",),
+    index=("deepseek/deepseek-r1:free",
+           "deepseek/deepseek-r1", "openai/gpt-4o-mini", "openai/o3-mini").index(st.session_state.selected_model),
+)
+
+if selected_model != st.session_state.selected_model:
+    st.session_state.selected_model = selected_model
+    st.session_state.llm = create_llm(selected_model)
+    st.session_state.retrieval_chain = create_retrieval(st.session_state.llm)
 
 for message in st.session_state.messages:
     if "user" == message["role"]:
@@ -76,7 +108,7 @@ if prompt := st.chat_input("Nhập câu truy vấn tại đây?"):
         st.caption("Có sử dụng dữ liệu trong file")
         with st.chat_message("assistant"):
             placeholder = st.empty()
-            for chunk in retrieval_chain.stream({"input": prompt}):
+            for chunk in st.session_state.retrieval_chain.stream({"input": prompt}):
                 if "answer" in chunk:
                     rag_response += chunk["answer"]
                     placeholder.write(rag_response)
@@ -92,7 +124,7 @@ if prompt := st.chat_input("Nhập câu truy vấn tại đây?"):
         st.caption("Không sử dụng dữ liệu trong file")
         with st.chat_message("assistant"):
             placeholder = st.empty()
-            for chunk in llm.stream([HumanMessage(content=prompt)]):
+            for chunk in st.session_state.llm.stream([HumanMessage(content=prompt)]):
                 llm_response += chunk.content
                 placeholder.write(llm_response)
 

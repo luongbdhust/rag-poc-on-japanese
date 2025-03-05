@@ -50,7 +50,7 @@ def create_retrieval(llm):
 
 
 if "selected_model" not in st.session_state:
-    st.session_state.selected_model = "deepseek/deepseek-r1:free"
+    st.session_state.selected_model = "deepseek/deepseek-r1"
     st.session_state.llm = create_llm(st.session_state.selected_model)
     st.session_state.retrieval_chain = create_retrieval(st.session_state.llm)
 
@@ -63,10 +63,10 @@ st.write("Ứng dụng sử dụng tài liệu [bài phân tích thị trường
 
 selected_model = st.selectbox(
     "Lựa chọn model bạn muốn sử dụng?",
-    ("deepseek/deepseek-r1:free", "deepseek/deepseek-r1",
+    ("deepseek/deepseek-r1",
      "openai/gpt-4o-mini", "openai/o3-mini",),
-    index=("deepseek/deepseek-r1:free",
-           "deepseek/deepseek-r1", "openai/gpt-4o-mini", "openai/o3-mini").index(st.session_state.selected_model),
+    index=("deepseek/deepseek-r1", "openai/gpt-4o-mini",
+           "openai/o3-mini").index(st.session_state.selected_model),
 )
 
 if selected_model != st.session_state.selected_model:

@@ -35,20 +35,6 @@ def create_retrieval(llm):
         llm, retrieval_qa_chat_prompt)
     return create_retrieval_chain(retriever, combine_docs_chain)
 
-# llm = ChatOpenAI(
-#     base_url=st.secrets["BASE_URL_API_KEY"],
-#     openai_api_key=st.secrets["OPENAI_API_KEY"],
-#     model_name=st.secrets["LLM_MODEL"],
-#     temperature=0.0,
-#     streaming=True
-# )
-
-# combine_docs_chain = create_stuff_documents_chain(
-#     llm, retrieval_qa_chat_prompt
-# )
-# retrieval_chain = create_retrieval_chain(retriever, combine_docs_chain)
-
-
 if "selected_model" not in st.session_state:
     st.session_state.selected_model = "deepseek/deepseek-r1"
     st.session_state.llm = create_llm(st.session_state.selected_model)
